@@ -2,10 +2,24 @@
   description = "niovi";
 
   outputs = { self }: {
-    SobUyrld = {
-      modz = [ "pkgs" "pkdjz" ];
+    HobUyrldz = hob: {
+      meikPod = {
+        modz = [ "pkgs" "pkdjz" ];
+        lamdy = import ./meikPod.nix;
+        self = null;
+      };
 
-      lamdy = import ./lamdy.nix;
+      nvim = {
+        modz = [ "pkgs" "pkdjz" ];
+        lamdy = import ./nvim.nix;
+        self = hob.neovim.maisiliym.mein;
+      };
+
+      pod = {
+        modz = [ "uyrld" ];
+        lamdy = import ./pod.nix;
+        inherit self;
+      };
 
     };
   };
