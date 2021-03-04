@@ -1,8 +1,9 @@
 { kor
 , krimyn
 , input
-, meikPraimyr
+, meikPod
 , stdenv
+, writeText
 , vimPloginz
 , vimPlugins
 , neovim-remote
@@ -27,7 +28,7 @@ argz@{ nvim, ... }:
 let
   inherit (krimyn.spinyrz) izUniksDev saizAtList iuzColemak;
 
-  aolPloginz = pkgs.vimPlugins // vimPloginz;
+  aolPloginz = vimPlugins // vimPloginz;
 
   minVimLPloginz = with vimPloginz; [
     dwm-vim
@@ -118,15 +119,15 @@ let
     universal-ctags
     go
     neovim-remote
-    uyrld.nixpkgs-fmt
+    nixpkgs-fmt
     sqlite
   ];
 
   maxPackages = with pkgs; [ ghc cabal-install stack ];
 
   eneibyldEksykiutybylz = minPackages
-    ++ (optionals (izUniksDev && saizAtList.med)
-    (medPackages ++ (optionals saizAtList.max maxPackages)));
+    ++ (optionals (izUniksDev && saizAtList.med) (medPackages
+    ++ (optionals saizAtList.max maxPackages)));
 
   spesyfai = {
     VimPlogin = niks: { VimPlogin = niks; };
@@ -136,14 +137,16 @@ let
   ploginz = map spesyfai.VimPlogin eneibyldPloginz;
   ekzykiutybylz = map spesyfai.Eksykiutybyl eneibyldEksykiutybylz;
 
-  initLua = { };
+  initLuaKod = "";
+
+  initLua = writeText "niovi-init.lua" initLuaKod;
 
   pod = meikPod {
     Iuzyr = {
       neim = "niovi";
       siskol = [ "${nvim}/bin/nvim" "-u" "${initLua}" ];
       niksiz = ploginz ++ ekzykiutybylz;
-      niksiFityrz = {
+      niksiSpiciz = {
         Eksykiutybyl = true;
         VimPlogin = true;
       };

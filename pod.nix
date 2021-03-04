@@ -1,4 +1,4 @@
 { niovi }:
-niovi.praim {
+niovi.meikPod {
   nvim = niovi.nvim;
 }

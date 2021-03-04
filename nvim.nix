@@ -1,52 +1,77 @@
 { self
-, kor
-, krimyn
-, input
-, meikPraimyr
 , stdenv
-, writeText
-, vimPloginz
-, vimPlugins
-, neovim-remote
-, python3Packages
+, lib
+, cmake
+, gettext
+, msgpack
+, libtermkey
+, libiconv
+, libuv
+, luajit
+, ncurses
+, pkgconfig
+, unibilium
+, wl-clipboard
+, gperf
+, libvterm-neovim
+, utf8proc
 , tree-sitter
-, tree-sitter-parsers
-, llvmPackages_latest
-, cmake-language-server
-, haskell-language-server
-, universal-ctags
-, rust-analyzer
-, rnix-lsp
-, nixpkgs-fmt
-, gopls
-, go
-, ghc
-, cabal-install
-, stack
 }:
 let
-  packages = { };
-
-  Praimyr = meikPraimyr {
-    neim = "niovi";
-    praimyr = [ "${bild}/bin/nvi" ];
-    env = {
-      PATH = packages ++ [ bild ];
-    };
-  };
-
-  meik = { ploginz }:
-    let
-      ploginzTri = { };
-
-    in
-    stdenv.mkDerivation {
-      pname = "niovi";
-      version = self.shortRev;
-      src = self;
-    };
-
-  bild = meik { };
+  nvimLuaEnv = luajit.withPackages (ps: (with ps; [ lpeg luabitop mpack ]));
 
 in
-Praimyr
+stdenv.mkDerivation {
+  pname = "nvim";
+  version = self.shortRev;
+  src = self;
+
+  dontFixCmake = true;
+  enableParallelBuilding = true;
+
+  buildInputs = [
+    gperf
+    libtermkey
+    libuv
+    libvterm-neovim
+    luajit.pkgs.luv.libluv
+    msgpack
+    ncurses
+    nvimLuaEnv
+    unibilium
+    utf8proc
+    tree-sitter
+  ];
+
+  doCheck = false;
+
+  checkPhase = ''
+    make functionaltest
+  '';
+
+  nativeBuildInputs = [
+    cmake
+    gettext
+    pkgconfig
+  ];
+
+
+  postPatch = ''
+    substituteInPlace src/nvim/version.c --replace NVIM_VERSION_CFLAGS "";
+  '';
+
+  disallowedReferences = [ stdenv.cc ];
+
+  cmakeFlags = [
+    "-DGPERF_PRG=${gperf}/bin/gperf"
+    "-DLUA_PRG=${nvimLuaEnv.interpreter}"
+    "-DLIBLUV_LIBRARY=${luajit.pkgs.luv}/lib/lua/${luajit.luaversion}/luv.so"
+  ];
+
+  hardeningDisable = [ "fortify" ];
+
+  postInstall = ''
+    sed -i -e "s|'wl-copy|'${wl-clipboard}/bin/wl-copy|g" $out/share/nvim/runtime/autoload/provider/clipboard.vim
+  '';
+
+}

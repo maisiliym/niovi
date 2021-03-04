@@ -4,7 +4,7 @@
   outputs = { self }: {
     HobUyrldz = hob: {
       meikPod = {
-        modz = [ "pkgs" "pkdjz" ];
+        modz = [ "pkgs" "uyrld" ];
         lamdy = import ./meikPod.nix;
         self = null;
       };
