@@ -3,30 +3,48 @@
 , input
 , stdenv
 , writeText
-, vimPloginz
-, vimPlugins
-, neovim-remote
 , python3Packages
 , tree-sitter
 , tree-sitter-parsers
-, llvmPackages_latest
-, cmake-language-server
-, haskell-language-server
-, universal-ctags
-, rust-analyzer
-, rnix-lsp
-, nixpkgs-fmt
-, gopls
-, go
-, ghc
-, cabal-install
-, stack
 , wrapNeovimUnstable
 }:
 
 argz@{ nvim, ... }:
 let
+  inherit (kor) mapAttrsToList;
   inherit (krimyn.spinyrz) izUniksDev saizAtList iuzColemak;
+
+  findDependenciesRecursively = plugins: lib.concatMap transitiveClosure plugins;
+
+  meikPloginzKod = packages:
+    let
+      packNamespace = "niovi";
+
+      link = (dir: pluginPath: "ln -sf ${pluginPath}/share/vim-plugins/* $out/pack/${packNamespace}/${dir}");
+
+      packageLinks = { start ? [ ], opt ? [ ] }:
+        let
+          depsOfOptionalPlugins = lib.subtractLists opt (findDependenciesRecursively opt);
+          startWithDeps = findDependenciesRecursively start;
+        in
+        [ "mkdir -p $out/pack/${packNamespace}/start" ]
+        ++ (builtins.map (link packNamespace "start") (lib.unique (startWithDeps ++ depsOfOptionalPlugins)))
+        ++ [ "mkdir -p $out/pack/${packNamespace}/opt" ]
+        ++ (builtins.map (link packNamespace "opt") opt);
+
+      packDir = stdenv.mkDerivation {
+        name = "vim-pack-dir";
+        src = ./.;
+        installPhase = lib.concatStringsSep "\n"
+          (lib.flatten (mapAttrsToList packageLinks packages));
+        preferLocalBuild = true;
+      };
+
+    in
+    ''
+      set packpath^=${packDir}
+      set runtimepath^=${packDir}
+    '';
 
   aolPloginz = vimPlugins // vimPloginz;
 
