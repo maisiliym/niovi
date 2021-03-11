@@ -1,5 +1,4 @@
 { kor
-, krimyn
 , input
 , stdenv
 , writeText
@@ -11,65 +10,46 @@
 
 argz@{ nvim, plugins, niks, packages, ... }:
 let
-  inherit (builtins) concatLists concatStringsSep;
-  inherit (kor) flatten mapAttrsToList concatMap;
-  inherit (krimyn.spinyrz) izUniksDev saizAtList iuzColemak;
+  inherit (builtins) map concatLists concatStringsSep;
+  inherit (kor) concatMap;
 
-  transitiveClosure = plugin: [ plugin ] ++
-    (unique (concatLists (map transitiveClosure plugin.dependencies or [ ])));
-
-  findDependenciesRecursively = plugins: concatMap transitiveClosure plugins;
-
-  meikPloginzKod = packages:
+  meikPackDir = plugins:
     let
-      packNamespace = "niovi";
+      transitiveClosure = plugin: [ plugin ] ++
+        (unique (concatLists (map transitiveClosure plugin.dependencies or [ ])));
 
-      link = dir: pluginPath:
-        "ln -sf ${pluginPath}/share/vim-plugins/* $out/pack/${packNamespace}/${dir}";
+      dependencies = concatMap transitiveClosure plugins;
 
-      packageLinks = { start ? [ ], opt ? [ ] }:
-        let
-          depsOfOptionalPlugins = subtractLists opt (findDependenciesRecursively opt);
-          startWithDeps = findDependenciesRecursively start;
-        in
-        [ "mkdir -p $out/pack/${packNamespace}/start" ]
-        ++ (builtins.map (link packNamespace "start") (unique (startWithDeps ++ depsOfOptionalPlugins)))
-        ++ [ "mkdir -p $out/pack/${packNamespace}/opt" ]
-        ++ (builtins.map (link packNamespace "opt") opt);
+      packTarget = "$out/pack/${niovi}/start";
 
-      packDir = stdenv.mkDerivation {
-        name = "vim-pack-dir";
-        src = ./.;
-        installPhase = concatStringsSep "\n"
-          (flatten (mapAttrsToList packageLinks packages));
-        preferLocalBuild = true;
-      };
+      link = pluginPath:
+        "ln -sf ${pluginPath}/share/vim-plugins/* ${packTarget}";
+
+      linkPlugin = plugin:
+        map link (unique (dependencies));
 
     in
-    ''
-      set packpath^=${packDir}
-      set runtimepath^=${packDir}
-    '';
+    stdenv.mkDerivation {
+      name = "niovi-pack-dir";
+      src = ./.;
 
-  aolPloginz = vimPlugins // vimPloginz;
+      installPhase = concatStringsSep "\n"
+        [ "mkdir -p ${packTarget}" ] ++ (map linkPlugin plugins);
+
+      preferLocalBuild = true;
+    };
+
+  packDir = meikPackDir plugins;
+
+  setRuntime = ''
+    set runtimepath^=${packDir}
+  '';
 
   initLuaKod = "";
 
   initLua = writeText "niovi-init.lua" initLuaKod;
 
   pod = wrapNeovimUnstable nvim { };
-
-  /* meikPod {
-    Iuzyr = {
-      neim = "niovi";
-      siskol = [ "${nvim}/bin/nvim" "-u" "${initLua}" ];
-      niksiz = ploginz ++ ekzykiutybylz;
-      niksiSpiciz = {
-        Eksykiutybyl = true;
-        VimPlogin = true;
-      };
-    };
-  }; */
 
 in
 pod
