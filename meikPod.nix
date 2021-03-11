@@ -1,4 +1,5 @@
 { kor
+, niovi
 , krimyn
 , input
 , stdenv
@@ -21,7 +22,6 @@
 , ghc
 , cabal-install
 , stack
-, wrapNeovimUnstable
 }:
 
 argz@{ nvim, ... }:
@@ -75,7 +75,6 @@ let
     nvim-bufferline-lua
     telescope-nvim
     FTerm-nvim
-    neogit # bogi
     gitsigns-nvim # bogi
     BufOnly-nvim
     nvim-autopairs
@@ -110,8 +109,6 @@ let
     ++ (optionals saizAtList.med medLuaPloginz)
     ++ (optionals saizAtList.max maxLuaPloginz);
 
-  eneibyldPloginz = vimlPloginz ++ luaPloginz;
-
   minPackages = with pkgs; [ ];
 
   medPackages = with pkgs; [
@@ -125,35 +122,15 @@ let
 
   maxPackages = with pkgs; [ ghc cabal-install stack ];
 
-  eneibyldEksykiutybylz = minPackages
+  plugins = vimlPloginz ++ luaPloginz;
+
+  packages = minPackages
     ++ (optionals (izUniksDev && saizAtList.med) (medPackages
     ++ (optionals saizAtList.max maxPackages)));
 
-  spesyfai = {
-    VimPlogin = niks: { VimPlogin = niks; };
-    Eksykiutybyl = niks: { Eksykiutybyl = niks; };
-  };
-
-  ploginz = map spesyfai.VimPlogin eneibyldPloginz;
-  ekzykiutybylz = map spesyfai.Eksykiutybyl eneibyldEksykiutybylz;
-
-  initLuaKod = "";
-
-  initLua = writeText "niovi-init.lua" initLuaKod;
-
-  pod = wrapNeovimUnstable nvim { };
-
-  /* meikPod {
-    Iuzyr = {
-      neim = "niovi";
-      siskol = [ "${nvim}/bin/nvim" "-u" "${initLua}" ];
-      niksiz = ploginz ++ ekzykiutybylz;
-      niksiSpiciz = {
-        Eksykiutybyl = true;
-        VimPlogin = true;
-      };
-    };
-  }; */
+  niks = { };
 
 in
-pod
+niovi.meikLegysi {
+  inherit nvim plugins niks packages;
+}

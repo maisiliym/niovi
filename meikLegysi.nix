@@ -9,34 +9,39 @@
 , wrapNeovimUnstable
 }:
 
-argz@{ nvim, ... }:
+argz@{ nvim, plugins, niks, packages, ... }:
 let
-  inherit (kor) mapAttrsToList;
+  inherit (builtins) concatLists concatStringsSep;
+  inherit (kor) flatten mapAttrsToList concatMap;
   inherit (krimyn.spinyrz) izUniksDev saizAtList iuzColemak;
 
-  findDependenciesRecursively = plugins: lib.concatMap transitiveClosure plugins;
+  transitiveClosure = plugin: [ plugin ] ++
+    (unique (concatLists (map transitiveClosure plugin.dependencies or [ ])));
+
+  findDependenciesRecursively = plugins: concatMap transitiveClosure plugins;
 
   meikPloginzKod = packages:
     let
       packNamespace = "niovi";
 
-      link = (dir: pluginPath: "ln -sf ${pluginPath}/share/vim-plugins/* $out/pack/${packNamespace}/${dir}");
+      link = dir: pluginPath:
+        "ln -sf ${pluginPath}/share/vim-plugins/* $out/pack/${packNamespace}/${dir}";
 
       packageLinks = { start ? [ ], opt ? [ ] }:
         let
-          depsOfOptionalPlugins = lib.subtractLists opt (findDependenciesRecursively opt);
+          depsOfOptionalPlugins = subtractLists opt (findDependenciesRecursively opt);
           startWithDeps = findDependenciesRecursively start;
         in
         [ "mkdir -p $out/pack/${packNamespace}/start" ]
-        ++ (builtins.map (link packNamespace "start") (lib.unique (startWithDeps ++ depsOfOptionalPlugins)))
+        ++ (builtins.map (link packNamespace "start") (unique (startWithDeps ++ depsOfOptionalPlugins)))
         ++ [ "mkdir -p $out/pack/${packNamespace}/opt" ]
         ++ (builtins.map (link packNamespace "opt") opt);
 
       packDir = stdenv.mkDerivation {
         name = "vim-pack-dir";
         src = ./.;
-        installPhase = lib.concatStringsSep "\n"
-          (lib.flatten (mapAttrsToList packageLinks packages));
+        installPhase = concatStringsSep "\n"
+          (flatten (mapAttrsToList packageLinks packages));
         preferLocalBuild = true;
       };
 
@@ -47,113 +52,6 @@ let
     '';
 
   aolPloginz = vimPlugins // vimPloginz;
-
-  minVimLPloginz = with vimPloginz; [
-    dwm-vim
-    vim-visual-multi
-    fzf-vim
-    zoxide-vim
-    astronauta-nvim
-  ];
-
-  medVimlPlogins = with aolPloginz; [
-    nvim-yarp # UpdateRemotePlugin replacement
-    gina-vim # git
-    vista-vim # Tags
-    vim-toml
-    ron-vim
-    tokei-vim
-    vim-nix
-    dhall-vim
-    vim-markdown
-    vim-ledger
-    vim-surround
-    vim-pager
-    vim-rooter
-    ultisnips
-    vim-snippets
-    bufferize-vim
-    minimap-vim
-  ];
-
-  maxVimlPlogins = with aolPloginz; [
-    vim-fugitive # git
-    gv-vim
-  ];
-
-  minLuaPloginz = with vimPloginz; [
-    plenary-nvim
-    popup-nvim
-    nvim-tree-lua
-    lir-nvim
-    completion-nvim
-    completion-buffers
-    nvim-treesitter
-    nvim-treesitter-refactor
-    nvim-bufferline-lua
-    telescope-nvim
-    FTerm-nvim
-    neogit # bogi
-    gitsigns-nvim # bogi
-    BufOnly-nvim
-    nvim-autopairs
-    nvim-fzf
-    nvim-fzf-commands
-    kommentary
-  ];
-
-  medLuaPloginz = with vimPloginz; [
-    nvim-lspconfig
-    lsp-status-nvim
-    nvim-lspfuzzy
-    nvim-web-devicons
-    galaxyline-nvim
-    nvim-colorizer-lua
-    nvim-base16-lua
-    nvim-lazygit
-    fzf-lsp-nvim
-    formatter-nvim
-  ];
-
-  maxLuaPloginz = with vimPloginz; [
-    lspsaga-nvim
-    nvim-treesitter-context
-  ];
-
-  vimlPloginz = minVimLPloginz
-    ++ (optionals saizAtList.med medVimlPlogins)
-    ++ (optionals saizAtList.max maxVimlPlogins);
-
-  luaPloginz = minLuaPloginz
-    ++ (optionals saizAtList.med medLuaPloginz)
-    ++ (optionals saizAtList.max maxLuaPloginz);
-
-  eneibyldPloginz = vimlPloginz ++ luaPloginz;
-
-  minPackages = with pkgs; [ ];
-
-  medPackages = with pkgs; [
-    llvmPackages_latest.clang
-    universal-ctags
-    go
-    neovim-remote
-    nixpkgs-fmt
-    sqlite
-  ];
-
-  maxPackages = with pkgs; [ ghc cabal-install stack ];
-
-  eneibyldEksykiutybylz = minPackages
-    ++ (optionals (izUniksDev && saizAtList.med) (medPackages
-    ++ (optionals saizAtList.max maxPackages)));
-
-  spesyfai = {
-    VimPlogin = niks: { VimPlogin = niks; };
-    Eksykiutybyl = niks: { Eksykiutybyl = niks; };
-  };
-
-  ploginz = map spesyfai.VimPlogin eneibyldPloginz;
-  ekzykiutybylz = map spesyfai.Eksykiutybyl eneibyldEksykiutybylz;
 
   initLuaKod = "";
 

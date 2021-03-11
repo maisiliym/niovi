@@ -3,7 +3,7 @@
 
   outputs = { self }: {
     HobUyrldz = hob: {
-      meikPod = {
+      meik = {
         modz = [ "pkgs" "uyrld" ];
         lamdy = import ./meikPod.nix;
         self = null;
