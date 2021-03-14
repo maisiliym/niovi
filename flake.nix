@@ -9,6 +9,12 @@
         self = null;
       };
 
+      meikLegysi = {
+        modz = [ "pkgs" "uyrld" ];
+        lamdy = import ./meikLegysi.nix;
+        self = null;
+      };
+
       nvim = {
         modz = [ "pkgs" "pkdjz" ];
         lamdy = import ./nvim.nix;

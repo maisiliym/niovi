@@ -18,7 +18,8 @@
 , tree-sitter
 }:
 let
-  nvimLuaEnv = luajit.withPackages (ps: (with ps; [ lpeg luabitop mpack ]));
+  lua = luajit;
+  nvimLuaEnv = lua.withPackages (ps: (with ps; [ lpeg luabitop mpack ]));
 
 in
 stdenv.mkDerivation {
@@ -34,7 +35,7 @@ stdenv.mkDerivation {
     libtermkey
     libuv
     libvterm-neovim
-    luajit.pkgs.luv.libluv
+    lua.pkgs.luv.libluv
     msgpack
     ncurses
     nvimLuaEnv
@@ -65,13 +66,19 @@ stdenv.mkDerivation {
   cmakeFlags = [
     "-DGPERF_PRG=${gperf}/bin/gperf"
     "-DLUA_PRG=${nvimLuaEnv.interpreter}"
-    "-DLIBLUV_LIBRARY=${luajit.pkgs.luv}/lib/lua/${luajit.luaversion}/luv.so"
+    "-DLIBLUV_LIBRARY=${lua.pkgs.luv}/lib/lua/${lua.luaversion}/luv.so"
   ];
 
   hardeningDisable = [ "fortify" ];
 
   postInstall = ''
     sed -i -e "s|'wl-copy|'${wl-clipboard}/bin/wl-copy|g" $out/share/nvim/runtime/autoload/provider/clipboard.vim
+
+    ln -s ${rapidjson}/lib/lua/${lua.luaversion}/rapidjson.so $out/share/nvim/runtime/lua/rapidjson.so
   '';
+
+  passthru = {
+    inherit lua;
+  };
 
 }

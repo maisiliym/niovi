@@ -8,44 +8,64 @@
 , wrapNeovimUnstable
 }:
 
-argz@{ nvim, plugins, niks, packages, ... }:
+argz@
+{ nvim
+, plugins
+, ploginz
+, niks
+, packages
+, luaModz
+, luaCModz
+, ...
+}:
 let
   inherit (builtins) map concatLists concatStringsSep;
   inherit (kor) concatMap;
+  inherit (nvim) lua;
 
-  meikPackDir = plugins:
-    let
-      transitiveClosure = plugin: [ plugin ] ++
-        (unique (concatLists (map transitiveClosure plugin.dependencies or [ ])));
+  transitiveClosure = plugin: [ plugin ] ++
+    (unique (concatLists (map transitiveClosure plugin.dependencies or [ ])));
 
-      dependencies = concatMap transitiveClosure plugins;
+  ploginDirz = concatMap (uniques
+    ((transitiveClosure plugins) ++ ((p: transitiveClosure p.dir) ploginz))
+  );
 
-      packTarget = "$out/pack/${niovi}/start";
-
-      link = pluginPath:
-        "ln -sf ${pluginPath}/share/vim-plugins/* ${packTarget}";
-
-      linkPlugin = plugin:
-        map link (unique (dependencies));
-
-    in
-    stdenv.mkDerivation {
-      name = "niovi-pack-dir";
-      src = ./.;
-
-      installPhase = concatStringsSep "\n"
-        [ "mkdir -p ${packTarget}" ] ++ (map linkPlugin plugins);
-
-      preferLocalBuild = true;
-    };
-
-  packDir = meikPackDir plugins;
+  runtimePaths = concatStringsSep "," ploginDirz;
 
   setRuntime = ''
     set runtimepath^=${packDir}
   '';
 
-  initLuaKod = "";
+  korNiks = { inherit runtimePaths; };
+
+  fainylNiks = niks // korNiks;
+
+  luaRidNiks = "";
+
+  luaCModz = argz.luaCModz ++ [ lua.pkgs.mpack ];
+
+  mkLuaCPath = drv: "${drv}/lib/lua/${drv.lua.luaversion}/?.so";
+
+  mkLuaPaths = drv: [
+    "${drv}/share/lua/${drv.lua.luaversion}/?.lua"
+    "${drv}/share/lua/${drv.lua.luaversion}/?/init.lua"
+  ];
+
+  luaModulesPaths = concatStringsSep ";"
+    (optionals (luaModz != [ ]) (concatMap mkLuaPaths luaModz));
+
+  luaCModulesPaths = concatStringsSep ";"
+    (optionals (luaCModz != [ ]) (map mkLuaCPath luaCModz));
+
+  loadLuaPathsKod = optionalString (luaModz != [ ]) ''
+    package.path = package.path .. ";" .. [[${luaModulesPaths}]]
+  '' + optionalString (luaCModz != [ ]) ''
+    package.cpath = package.cpath .. ";" .. [[${luaCModulesPaths}]]
+  '';
+
+  nioviLuaInit = readfile ./lua/niovi.lua;
+
+  initLuaKod = loadLuaPathsKod + nioviLuaInit;
 
   initLua = writeText "niovi-init.lua" initLuaKod;
 
