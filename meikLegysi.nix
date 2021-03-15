@@ -1,11 +1,11 @@
-{ kor
-, input
+{ self
+, kor
+, kynvyrt
+, nvimPloginz
 , stdenv
 , writeText
-, python3Packages
-, tree-sitter
-, tree-sitter-parsers
-, wrapNeovimUnstable
+, symlinkJoin
+, makeWrapper
 }:
 
 argz@
@@ -19,29 +19,36 @@ argz@
 , ...
 }:
 let
-  inherit (builtins) map concatLists concatStringsSep;
-  inherit (kor) concatMap;
+  inherit (builtins) map unique concatLists concatStringsSep filter;
+  inherit (kor) concatMap makeSearchPath;
   inherit (nvim) lua;
+
+  korPloginz = [
+    { spici = "lua"; drv = nvimPloginz.plenary-kor; }
+  ];
+
+  ploginz = argz.ploginz ++ korPloginz;
 
   transitiveClosure = plugin: [ plugin ] ++
     (unique (concatLists (map transitiveClosure plugin.dependencies or [ ])));
 
-  ploginDirz = concatMap (uniques
-    ((transitiveClosure plugins) ++ ((p: transitiveClosure p.dir) ploginz))
-  );
+  vimPloginz = map (p: p.dir) (filter (p: p.spici == "vim") ploginz);
+  vimPlugins = unique (plugins ++ vimPloginz);
 
-  runtimePaths = concatStringsSep "," ploginDirz;
+  vimPluginDirz = concatMap (transitiveClosure vimPlugins);
 
-  setRuntime = ''
-    set runtimepath^=${packDir}
-  '';
-
-  korNiks = { inherit runtimePaths; };
+  korNiks = { inherit vimPluginDirz; };
 
   fainylNiks = niks // korNiks;
 
+  nioviNiks = kynvyrt {
+    neim = "niovi-niks.msgpack";
+    valiu = fainylNiks;
+  };
+
   luaRidNiks = "";
 
+  luaModz = argz.luaModz ++ [ lua.pkgs.penlight ];
   luaCModz = argz.luaCModz ++ [ lua.pkgs.mpack ];
 
   mkLuaCPath = drv: "${drv}/lib/lua/${drv.lua.luaversion}/?.so";
@@ -51,16 +58,25 @@ let
     "${drv}/share/lua/${drv.lua.luaversion}/?/init.lua"
   ];
 
-  luaModulesPaths = concatStringsSep ";"
-    (optionals (luaModz != [ ]) (concatMap mkLuaPaths luaModz));
+  mkLuaPloginPaths = plogin:
+    [ "${plogin}/lua/?.lua" "${plogin}/lua/?/init.lua" ];
 
-  luaCModulesPaths = concatStringsSep ";"
-    (optionals (luaCModz != [ ]) (map mkLuaCPath luaCModz));
+  luaModulesPaths = concatStringsSep ";" (
+    ((concatMap mkLuaPaths luaModz)) ++
+    (concatMap mkLuaPloginPaths (filter (p: p.spici == "lua") ploginz))
+  );
+
+  luaCModulesPaths = concatStringsSep ";" (map mkLuaCPath luaCModz);
 
   loadLuaPathsKod = optionalString (luaModz != [ ]) ''
     package.path = package.path .. ";" .. [[${luaModulesPaths}]]
   '' + optionalString (luaCModz != [ ]) ''
     package.cpath = package.cpath .. ";" .. [[${luaCModulesPaths}]]
+  '';
+
+  runtimePaths = concatStringsSep "," vimPluginDirz;
+  loadRuntimepath = ''
+    vim.o.runtimepath = [[${runtimePaths}]]
   '';
 
   nioviLuaInit = readfile ./lua/niovi.lua;
@@ -69,7 +85,26 @@ let
 
   initLua = writeText "niovi-init.lua" initLuaKod;
 
-  pod = wrapNeovimUnstable nvim { };
+  packagesPath = makeSearchPath "bin" packages;
+
+  pod = mkDerivation {
+    name = "niovi";
+    version = self.shortRev;
+
+    buildPhase = ''
+      mkdir -p $out/bin
+    '';
+
+    installPhase = ''
+      makeWrapper ${nvim}/bin/nvim $out/bin/nvi \
+      --set VIMRUNTIME ${nvim}/share/nvim/runtime \
+      --set PATH ${packagesPath} \
+      --set NIOVINIKS ${nioviNiks} \
+      -u ${initLua}
+    '';
+
+    nativeBuildInputs = [ makeWrapper ];
+  };
 
 in
 pod
