@@ -73,8 +73,6 @@ stdenv.mkDerivation {
 
   postInstall = ''
     sed -i -e "s|'wl-copy|'${wl-clipboard}/bin/wl-copy|g" $out/share/nvim/runtime/autoload/provider/clipboard.vim
-
-    ln -s ${rapidjson}/lib/lua/${lua.luaversion}/rapidjson.so $out/share/nvim/runtime/lua/rapidjson.so
   '';
 
   passthru = {

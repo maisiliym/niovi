@@ -1,136 +1,112 @@
-{ kor
-, niovi
-, krimyn
-, input
+{ self
+, kor
+, kynvyrt
+, nvimPloginz
 , stdenv
 , writeText
-, vimPloginz
-, vimPlugins
-, neovim-remote
-, python3Packages
-, tree-sitter
-, tree-sitter-parsers
-, llvmPackages_latest
-, cmake-language-server
-, haskell-language-server
-, universal-ctags
-, rust-analyzer
-, rnix-lsp
-, nixpkgs-fmt
-, gopls
-, go
-, ghc
-, cabal-install
-, stack
+, symlinkJoin
+, makeWrapper
 }:
 
-argz@{ nvim, ... }:
+argz@
+{ nvim
+, plugins ? [ ]
+, ploginz ? [ ]
+, niks ? { }
+, packages ? [ ]
+, luaModz ? [ ]
+, luaCModz ? [ ]
+, ...
+}:
 let
-  inherit (krimyn.spinyrz) izUniksDev saizAtList iuzColemak;
+  inherit (builtins) map concatLists concatStringsSep filter
+    concatMap readFile;
+  inherit (kor) unique makeSearchPath optionalString;
+  inherit (stdenv) mkDerivation;
+  inherit (nvim) lua;
 
-  aolPloginz = vimPlugins // vimPloginz;
-
-  minVimLPloginz = with vimPloginz; [
-    dwm-vim
-    vim-visual-multi
-    fzf-vim
-    zoxide-vim
-    astronauta-nvim
+  korPloginz = [
+    { spici = "lua"; drv = nvimPloginz.plenary-kor; }
   ];
 
-  medVimlPlogins = with aolPloginz; [
-    nvim-yarp # UpdateRemotePlugin replacement
-    gina-vim # git
-    vista-vim # Tags
-    vim-toml
-    ron-vim
-    tokei-vim
-    vim-nix
-    dhall-vim
-    vim-markdown
-    vim-ledger
-    vim-surround
-    vim-pager
-    vim-rooter
-    ultisnips
-    vim-snippets
-    bufferize-vim
-    minimap-vim
+  ploginz = (argz.ploginz or [ ]) ++ korPloginz;
+
+  transitiveClosure = plugin: [ plugin ] ++
+    (unique (concatLists (map transitiveClosure plugin.dependencies or [ ])));
+
+  vimPloginz = map (p: p.drv) (filter (p: p.spici == "vim") ploginz);
+  vimPlugins = plugins ++ vimPloginz;
+
+  vimPluginDirz = concatMap transitiveClosure vimPlugins;
+
+  korNiks = { inherit vimPluginDirz; };
+
+  fainylNiks = niks // korNiks;
+
+  nioviNiks = kynvyrt {
+    neim = "niovi-niks";
+    valiu = fainylNiks;
+  };
+
+  luaRidNiks = "";
+
+  luaModz = (argz.luaModz or [ ]) ++ [ lua.pkgs.penlight ];
+  luaCModz = (argz.luaCModz or [ ]) ++ [ lua.pkgs.mpack ];
+
+  mkLuaCPath = drv: "${drv}/lib/lua/${drv.lua.luaversion}/?.so";
+
+  mkLuaPaths = drv: [
+    "${drv}/share/lua/${drv.lua.luaversion}/?.lua"
+    "${drv}/share/lua/${drv.lua.luaversion}/?/init.lua"
   ];
 
-  maxVimlPlogins = with aolPloginz; [
-    vim-fugitive # git
-    gv-vim
-  ];
+  mkLuaPloginPaths = plogin:
+    [ "${plogin.drv}/lua/?.lua" "${plogin.drv}/lua/?/init.lua" ];
 
-  minLuaPloginz = with vimPloginz; [
-    plenary-nvim
-    popup-nvim
-    nvim-tree-lua
-    lir-nvim
-    completion-nvim
-    completion-buffers
-    nvim-treesitter
-    nvim-treesitter-refactor
-    nvim-bufferline-lua
-    telescope-nvim
-    FTerm-nvim
-    gitsigns-nvim # bogi
-    BufOnly-nvim
-    nvim-autopairs
-    nvim-fzf
-    nvim-fzf-commands
-    kommentary
-  ];
+  luaModulesPaths = concatStringsSep ";" (
+    ((concatMap mkLuaPaths luaModz)) ++
+    (concatMap mkLuaPloginPaths (filter (p: p.spici == "lua") ploginz))
+  );
 
-  medLuaPloginz = with vimPloginz; [
-    nvim-lspconfig
-    lsp-status-nvim
-    nvim-lspfuzzy
-    nvim-web-devicons
-    galaxyline-nvim
-    nvim-colorizer-lua
-    nvim-base16-lua
-    nvim-lazygit
-    fzf-lsp-nvim
-    formatter-nvim
-  ];
+  luaCModulesPaths = concatStringsSep ";" (map mkLuaCPath luaCModz);
 
-  maxLuaPloginz = with vimPloginz; [
-    lspsaga-nvim
-    nvim-treesitter-context
-  ];
+  loadLuaPathsKod = optionalString (luaModulesPaths != [ ]) ''
+    package.path = package.path .. ";" .. [[${luaModulesPaths}]]
+  '' + optionalString (luaCModulesPaths != [ ]) ''
+    package.cpath = package.cpath .. ";" .. [[${luaCModulesPaths}]]
+  '';
 
-  vimlPloginz = minVimLPloginz
-    ++ (optionals saizAtList.med medVimlPlogins)
-    ++ (optionals saizAtList.max maxVimlPlogins);
+  runtimePaths = concatStringsSep "," vimPluginDirz;
+  loadRuntimepath = ''
+    vim.o.runtimepath = [[${runtimePaths}]]
+  '';
 
-  luaPloginz = minLuaPloginz
-    ++ (optionals saizAtList.med medLuaPloginz)
-    ++ (optionals saizAtList.max maxLuaPloginz);
+  nioviLuaInit = readFile ./lua/niovi.lua;
 
-  minPackages = with pkgs; [ ];
+  initLuaKod = loadLuaPathsKod + nioviLuaInit;
 
-  medPackages = with pkgs; [
-    llvmPackages_latest.clang
-    universal-ctags
-    go
-    neovim-remote
-    nixpkgs-fmt
-    sqlite
-  ];
+  initLua = writeText "niovi-init.lua" initLuaKod;
 
-  maxPackages = with pkgs; [ ghc cabal-install stack ];
+  packagesPath = makeSearchPath "bin" packages;
 
-  plugins = vimlPloginz ++ luaPloginz;
+  pod = mkDerivation {
+    name = "niovi";
+    version = self.shortRev;
 
-  packages = minPackages
-    ++ (optionals (izUniksDev && saizAtList.med) (medPackages
-    ++ (optionals saizAtList.max maxPackages)));
+    buildPhase = ''
+      mkdir -p $out/bin
+    '';
 
-  niks = { };
+    installPhase = ''
+      makeWrapper ${nvim}/bin/nvim $out/bin/nvi \
+      --set VIMRUNTIME ${nvim}/share/nvim/runtime \
+      --set PATH ${packagesPath} \
+      --set NIOVINIKS ${nioviNiks} \
+      -u ${initLua}
+    '';
+
+    nativeBuildInputs = [ makeWrapper ];
+  };
 
 in
-niovi.meikLegysi {
-  inherit nvim plugins niks packages;
-}
+pod

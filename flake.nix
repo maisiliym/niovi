@@ -4,20 +4,21 @@
   outputs = { self }: {
     HobUyrldz = hob: {
       meik = {
-        modz = [ "pkgs" "uyrld" ];
-        lamdy = import ./meikPod.nix;
+        modz = [ "pkgs" "pkdjz" "uyrld" "krimyn" ];
+        lamdy = import ./meik.nix;
         self = null;
       };
 
-      meikLegysi = {
+      meikPod = {
         modz = [ "pkgs" "pkdjz" ];
-        lamdy = import ./meikLegysi.nix;
+        lamdy = import ./meikPod.nix;
+        inherit self;
       };
 
       nvim = {
         modz = [ "pkgs" "pkdjz" ];
         lamdy = import ./nvim.nix;
-        self = hob.neovim.maisiliym.mein;
+        self = hob.neovim.mein;
       };
 
       pod = {
